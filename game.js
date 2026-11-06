@@ -5720,7 +5720,8 @@ const DONUT_APPEARANCE_WAIT_REDUCTION = 1.40;
    *  - sharp on every phone: the canvas is drawn at the device's pixels (theirs was a fixed 390x844, about 2.3x upscaled on
    *    a 3x iPhone). If a phone cannot keep up, it steps down once or twice.
    *  - their fixed-position menus that need more height than the window are scaled as a block over a full-width backdrop.
-   *  - the app's Done / collapse corners are kept clear only in its expanded view (loader.ts infers the view).
+   *  - the app's Done / collapse corners: in its expanded view (loader.ts infers it) their art and tower fill the whole
+   *    window up to the top, behind those buttons, and only their screen's content starts below them.
    *  - no scroll, no zoom.
    * ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────── */
   const gbApi = window.DTGB;
@@ -5766,26 +5767,35 @@ const DONUT_APPEARANCE_WAIT_REDUCTION = 1.40;
   }
 
   /* ── layout ── */
+  const gbDlg = document.createElement('div');
+  gbDlg.className = 'dtgb-dialog';
+  gbDlg.hidden = true;
+  const gbPanel = document.createElement('div');
+  gbPanel.className = 'dtgb-panel';
+  gbDlg.appendChild(gbPanel);
+  gbShell.appendChild(gbDlg);
   const GB_MIN_H = 600;   // their jump, HUD and result panel (ends at 589) need this much at 390 wide
-  const GB_BAND = 50;     // the app's expanded view: Done / collapse are 44 px tall, 4 px in
+  const GB_BAND = 50;     // the app's expanded view: Done / collapse are 44 px tall, 4 px in; their content starts below this
   const GB_CORNER_W = 72; // Done's width with its margin; the collapse button is narrower
   let gbBase = 1;
+  let gbBandUnits = 0;    // their y = 0 sits this far below the canvas top; their art still fills that part
   let gbRatioCap = 3;
   function gbFit() {
     const W = window.innerWidth, H = window.innerHeight;
     if (!W || !H) return;
     const widthFor = (h) => Math.min(W, Math.floor((h * WIDTH) / GB_MIN_H));
-    let top = 0, h = H, w = widthFor(h);
-    // The band only when the game's own top corners sit under the app's buttons.
-    if (window.DT_APP_CORNERS && (W - w) / 2 < GB_CORNER_W) { top = GB_BAND; h = H - GB_BAND; w = widthFor(h); }
+    let band = 0, w = widthFor(H);
+    // Only when the game's own top corners sit under the app's buttons.
+    if (window.DT_APP_CORNERS && (W - w) / 2 < GB_CORNER_W) { band = GB_BAND; w = widthFor(H - GB_BAND); }
     const left = Math.floor((W - w) / 2);
     gbShell.style.left = left + 'px';
-    gbShell.style.top = top + 'px';
+    gbShell.style.top = '0px';
     gbShell.style.width = w + 'px';
-    gbShell.style.height = h + 'px';
-    gbSides.style.display = (w < W || top > 0) ? 'block' : 'none';
+    gbShell.style.height = H + 'px';
+    gbSides.style.display = w < W ? 'block' : 'none';
+    gbDlg.style.paddingTop = (18 + band) + 'px';
     const r = Math.min(gbRatioCap, window.devicePixelRatio || 1);
-    const pw = Math.round(w * r), ph = Math.round(h * r);
+    const pw = Math.round(w * r), ph = Math.round(H * r);
     if (canvas.width !== pw || canvas.height !== ph) {
       canvas.width = pw;
       canvas.height = ph;
@@ -5793,8 +5803,9 @@ const DONUT_APPEARANCE_WAIT_REDUCTION = 1.40;
       ctx.imageSmoothingQuality = 'high';
     }
     gbBase = pw / WIDTH;
-    HEIGHT = ph / gbBase;
-    gbLog(`Fit: window ${W}x${H}, game ${w}x${h} at +${left},+${top}, ${pw}x${ph} px (ratio ${r}), height ${HEIGHT.toFixed(1)} units${top ? ', app corners band' : ''}.`);
+    gbBandUnits = (band * WIDTH) / w;
+    HEIGHT = ph / gbBase - gbBandUnits;
+    gbLog(`Fit: window ${W}x${H}, game ${w}x${H} at +${left},0, ${pw}x${ph} px (ratio ${r}), ${HEIGHT.toFixed(1)} units tall${band ? ', content below the app corners' : ''}.`);
   }
   window.DTFit = gbFit;
   window.addEventListener('resize', gbFit);
@@ -5820,14 +5831,14 @@ const DONUT_APPEARANCE_WAIT_REDUCTION = 1.40;
       g.drawImage(image, (c.width - dw) / 2, c.height - dh, dw, dh);
       gbBackdrop = { image, c };
     }
-    ctx.drawImage(gbBackdrop.c, 0, 0, WIDTH, HEIGHT);
+    ctx.drawImage(gbBackdrop.c, 0, -gbBandUnits, WIDTH, HEIGHT + gbBandUnits);
   };
 
   /* ── their menus on a shorter canvas: scaled as a block, the backdrop and full-screen veils still fill the canvas ── */
   const GB_HOME_NEED = 650;   // their last line (the one below it is left out) ends at about 630
   const GB_SELECT_NEED = 713; // their panel ends at 637, then their BACK
   let gbMenuScale = 1;
-  const gbBaseMatrix = () => ctx.setTransform(gbBase, 0, 0, gbBase, 0, 0);
+  const gbBaseMatrix = () => ctx.setTransform(gbBase, 0, 0, gbBase, 0, gbBase * gbBandUnits);
   // Scale and top of the block. Their STAGE SELECT buttons start at 54: on a short canvas they stay below the Lives and sound
   // buttons (which end at 46 and are not scaled), so the block keeps 4 units under those.
   function gbMenuFit(screen) {
@@ -5860,10 +5871,11 @@ const DONUT_APPEARANCE_WAIT_REDUCTION = 1.40;
   };
   const gbFillRect = ctx.fillRect.bind(ctx);
   ctx.fillRect = function (x, y, w, h) {
-    if (gbMenuScale < 1 && x === 0 && y === 0 && w === WIDTH && h === HEIGHT) {
+    if (x === 0 && y === 0 && w === WIDTH && h === HEIGHT) {
+      // Their full-screen veils and flashes cover the whole canvas: the scaled block's sides and the part above their y = 0.
       ctx.save();
       gbBaseMatrix();
-      gbFillRect(x, y, w, h);
+      gbFillRect(0, -gbBandUnits, WIDTH, HEIGHT + gbBandUnits);
       ctx.restore();
     } else gbFillRect(x, y, w, h);
   };
@@ -5885,13 +5897,6 @@ const DONUT_APPEARANCE_WAIT_REDUCTION = 1.40;
   };
 
   /* ── GameBull messages, in the look of their result panel ── */
-  const gbDlg = document.createElement('div');
-  gbDlg.className = 'dtgb-dialog';
-  gbDlg.hidden = true;
-  const gbPanel = document.createElement('div');
-  gbPanel.className = 'dtgb-panel';
-  gbDlg.appendChild(gbPanel);
-  gbShell.appendChild(gbDlg);
   const gbPara = (t) => { const p = document.createElement('p'); p.textContent = t; return p; };
   function gbDialog(nodes, buttons) {
     gbPanel.replaceChildren(...nodes);
@@ -5920,6 +5925,12 @@ const DONUT_APPEARANCE_WAIT_REDUCTION = 1.40;
   const gbTheirUpdatePlay = updatePlay, gbTheirUpdateImpact = updateImpact;
   updatePlay = function (dt) { if (!gbFrozen()) gbTheirUpdatePlay(dt); };
   updateImpact = function (dt) { if (!gbFrozen()) gbTheirUpdateImpact(dt); };
+
+  // Their tap point: the canvas now starts above their y = 0 in the app's expanded view.
+  pointFromEvent = function (event) {
+    const rect = canvas.getBoundingClientRect(), k = WIDTH / rect.width;
+    return { x: (event.clientX - rect.left) * k, y: (event.clientY - rect.top) * k - gbBandUnits };
+  };
 
   const gbTheirTap = handleTap;
   handleTap = function (point) {
@@ -6206,7 +6217,7 @@ const DONUT_APPEARANCE_WAIT_REDUCTION = 1.40;
       .finally(done);
   }
 
-  if (window.DT_GB && window.DT_GB.dev) window.DTDev = { state, finishGame: (...a) => finishGame(...a), get height() { return HEIGHT; }, menu: gbMenuFit };
+  if (window.DT_GB && window.DT_GB.dev) window.DTDev = { state, finishGame: (...a) => finishGame(...a), get height() { return HEIGHT; }, get band() { return gbBandUnits; }, menu: gbMenuFit };
 
   requestAnimationFrame(frame);
 })();
