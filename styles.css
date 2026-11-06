@@ -1,0 +1,91 @@
+:root {
+  color-scheme: light;
+  background: #5b3935;
+  font-family: ui-rounded, "Hiragino Maru Gothic ProN", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: #5b3935;
+}
+
+body {
+  display: grid;
+  place-items: center;
+}
+
+.app-shell {
+  position: relative;
+  width: min(100vw, calc(100dvh * 390 / 844));
+  height: min(100dvh, calc(100vw * 844 / 390));
+  min-width: 280px;
+  min-height: 606px;
+  overflow: hidden;
+  background: #ffe9cb;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Generated illustration assets should remain smooth when the fixed game
+     canvas is fitted to a phone screen. */
+  image-rendering: auto;
+}
+
+#tap-target {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: none;
+}
+
+#tap-target:focus-visible {
+  outline: 3px solid #c86a7a;
+  outline-offset: -5px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (orientation: landscape) and (max-height: 580px) {
+  .app-shell::after {
+    content: "縦向きで遊んでね";
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 2rem;
+    text-align: center;
+    font-weight: 800;
+    color: #fff7e8;
+    background: rgba(91, 57, 53, .94);
+    pointer-events: none;
+  }
+}

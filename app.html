@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+    <meta name="theme-color" content="#f6dfc1" />
+    <meta name="description" content="タップでドーナツを積み上げて登る、縦持ちスマホ向けゲーム" />
+    <title>DONUT TOWER</title>
+    <link rel="stylesheet" href="styles.css?v=donut-stack-test-r2-1" />
+  </head>
+  <body>
+    <main class="app-shell" aria-label="DONUT TOWER">
+      <canvas id="game" width="390" height="844" aria-label="DONUT TOWER game canvas"></canvas>
+      <button id="tap-target" type="button" aria-label="タップしてジャンプ"></button>
+      <p class="sr-only" id="game-instructions">画面をタップしてジャンプ。ドーナツを積み上げ、ゴールの高さまで登ります。</p>
+    </main>
+    <script src="gb/dt-env.js?v=1"></script><script src="gb/dt-host.js?v=1"></script><script src="stages.js?v=1"></script>
+    <script src="balance-model.js?v=balance-r2-1"></script>
+  <script src="game.js?v=pop-bgm-song-r1-1"></script>
+  </body>
+</html>
